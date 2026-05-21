@@ -2,7 +2,6 @@
 
 A cybersecurity tool for **static malware analysis** — no sandboxing, no execution. Drop a file, get a full report.
 
-![MalScan Screenshot](https://raw.githubusercontent.com/YOUR_USERNAME/malscan/main/docs/screenshot.png)
 
 ---
 
