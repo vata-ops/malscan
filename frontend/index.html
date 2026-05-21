@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MalScan — Static File Analyzer</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="static/css/style.css" />
+</head>
+<body>
+  <div class="scanlines"></div>
+
+  <header>
+    <div class="logo">
+      <span class="logo-bracket">[</span>
+      <span class="logo-text">MAL</span><span class="logo-accent">SCAN</span>
+      <span class="logo-bracket">]</span>
+    </div>
+    <div class="header-meta">
+      <span class="badge badge-green">STATIC ANALYSIS</span>
+      <span class="version">v1.0.0</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- Upload Section -->
+    <section class="upload-section" id="upload-section">
+      <div class="terminal-line">
+        <span class="prompt">$</span>
+        <span class="cmd">malscan --interactive</span>
+        <span class="cursor"></span>
+      </div>
+
+      <div class="drop-zone" id="drop-zone">
+        <div class="drop-icon">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="8" y="4" width="36" height="44" rx="3" stroke="currentColor" stroke-width="2"/>
+            <path d="M44 4L56 16H44V4Z" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M56 16V48H20" stroke="currentColor" stroke-width="2"/>
+            <path d="M28 32L36 24L44 32" stroke="#00ff88" stroke-width="2" stroke-linecap="round"/>
+            <path d="M36 24V44" stroke="#00ff88" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <p class="drop-title">DROP FILE TO ANALYZE</p>
+        <p class="drop-sub">EXE · DLL · PDF · DOCX · XLSX · PS1 · PY · JS · SH</p>
+        <p class="drop-sub muted">Max 50MB</p>
+        <label class="btn-upload" for="file-input">
+          SELECT FILE
+          <input type="file" id="file-input" accept=".exe,.dll,.sys,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.js,.py,.sh,.ps1,.bat,.vbs,.rb,.php" />
+        </label>
+      </div>
+
+      <div class="vt-row">
+        <label class="vt-label" for="vt-key">
+          <span class="prompt">$</span> VirusTotal API Key
+          <span class="badge badge-dim">OPTIONAL</span>
+        </label>
+        <div class="vt-input-wrap">
+          <input type="password" id="vt-key" class="vt-input" placeholder="Enter your VT API key for hash lookup..." autocomplete="off" />
+          <button class="btn-toggle-key" id="toggle-key" title="Show/hide key">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M10 3C5 3 1.73 7.11 1.73 10S5 17 10 17s8.27-4.11 8.27-7S15 3 10 3zm0 12c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
+          </button>
+        </div>
+        <p class="vt-hint">Get a free key at <a href="https://www.virustotal.com" target="_blank">virustotal.com</a> — 4 lookups/min on free tier</p>
+      </div>
+
+      <div class="disclaimer">
+        <span class="prompt">!</span>
+        All analysis is performed <strong>locally</strong> (static only — no file execution). Files are not stored.
+      </div>
+    </section>
+
+    <!-- Loading Section -->
+    <section class="loading-section hidden" id="loading-section">
+      <div class="loading-header">
+        <span class="prompt">$</span>
+        <span id="loading-filename" class="loading-fname">file.exe</span>
+      </div>
+      <div class="loading-steps" id="loading-steps">
+        <div class="step active" data-step="0">
+          <span class="step-dot"></span>
+          <span>Identifying file type & computing hashes</span>
+        </div>
+        <div class="step" data-step="1">
+          <span class="step-dot"></span>
+          <span>Measuring entropy across file regions</span>
+        </div>
+        <div class="step" data-step="2">
+          <span class="step-dot"></span>
+          <span>Extracting strings & IOCs</span>
+        </div>
+        <div class="step" data-step="3">
+          <span class="step-dot"></span>
+          <span>Running type-specific analysis</span>
+        </div>
+        <div class="step" data-step="4">
+          <span class="step-dot"></span>
+          <span>VirusTotal hash lookup</span>
+        </div>
+        <div class="step" data-step="5">
+          <span class="step-dot"></span>
+          <span>Calculating risk score</span>
+        </div>
+      </div>
+      <div class="loading-bar-wrap">
+        <div class="loading-bar" id="loading-bar"></div>
+      </div>
+    </section>
+
+    <!-- Results Section -->
+    <section class="results-section hidden" id="results-section">
+      <div class="results-header">
+        <button class="btn-back" id="btn-back">← NEW SCAN</button>
+        <div class="results-title">
+          <span class="prompt">$</span>
+          <span id="result-filename">report.exe</span>
+        </div>
+        <button class="btn-export" id="btn-export">EXPORT JSON</button>
+      </div>
+
+      <!-- Risk Score Banner -->
+      <div class="risk-banner" id="risk-banner">
+        <div class="risk-left">
+          <div class="risk-label">RISK SCORE</div>
+          <div class="risk-score" id="risk-score-val">--</div>
+          <div class="risk-verdict" id="risk-verdict">--</div>
+        </div>
+        <div class="risk-right">
+          <div class="risk-gauge-wrap">
+            <svg class="risk-gauge" viewBox="0 0 200 110" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#00ff88"/>
+                  <stop offset="50%" stop-color="#ffaa00"/>
+                  <stop offset="100%" stop-color="#ff3333"/>
+                </linearGradient>
+              </defs>
+              <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#1a1a1a" stroke-width="16" stroke-linecap="round"/>
+              <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="url(#gaugeGrad)" stroke-width="12" stroke-linecap="round" opacity="0.25"/>
+              <path id="gauge-arc" d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="url(#gaugeGrad)" stroke-width="12" stroke-linecap="round" stroke-dasharray="0 251.2"/>
+              <line id="gauge-needle" x1="100" y1="100" x2="100" y2="28" stroke="#ffffff" stroke-width="2" stroke-linecap="round" transform="rotate(0, 100, 100)"/>
+              <circle cx="100" cy="100" r="5" fill="#ffffff"/>
+            </svg>
+          </div>
+          <div class="risk-factors" id="risk-factors-list"></div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab active" data-tab="overview">OVERVIEW</button>
+        <button class="tab" data-tab="strings">STRINGS</button>
+        <button class="tab" data-tab="iocs">IOCs</button>
+        <button class="tab" data-tab="entropy">ENTROPY</button>
+        <button class="tab" data-tab="specific">DEEP ANALYSIS</button>
+        <button class="tab" data-tab="virustotal">VIRUSTOTAL</button>
+      </div>
+
+      <!-- Tab Panels -->
+      <div class="tab-content">
+
+        <!-- Overview -->
+        <div class="panel active" id="panel-overview">
+          <div class="info-grid" id="overview-grid"></div>
+          <div class="hash-block" id="hash-block"></div>
+        </div>
+
+        <!-- Strings -->
+        <div class="panel hidden" id="panel-strings">
+          <div class="strings-toolbar">
+            <input type="text" id="strings-search" placeholder="Filter strings..." class="strings-filter" />
+            <div class="strings-tabs">
+              <button class="stab active" data-stab="ascii">ASCII</button>
+              <button class="stab" data-stab="unicode">UNICODE</button>
+            </div>
+          </div>
+          <div class="strings-list" id="strings-list"></div>
+        </div>
+
+        <!-- IOCs -->
+        <div class="panel hidden" id="panel-iocs">
+          <div class="ioc-list" id="ioc-list"></div>
+        </div>
+
+        <!-- Entropy -->
+        <div class="panel hidden" id="panel-entropy">
+          <div class="entropy-summary" id="entropy-summary"></div>
+          <canvas id="entropy-chart" height="180"></canvas>
+          <div class="sections-table" id="sections-table"></div>
+        </div>
+
+        <!-- Deep Analysis -->
+        <div class="panel hidden" id="panel-specific">
+          <div id="specific-content"></div>
+        </div>
+
+        <!-- VirusTotal -->
+        <div class="panel hidden" id="panel-virustotal">
+          <div id="vt-content"></div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="static/js/app.js"></script>
+</body>
+</html>
